@@ -1,36 +1,70 @@
 pipeline {
     agent any
 
+    tools {
+        //Maven versi 3.9
+        maven 'maven-3.9'
+    }
+
+    environment {
+        DOCKER_IMAGE = "fdzak01/jenkins-demo-app"
+        DOCKER_TAG = "latest"
+    }
+
     stages {
-        stage('Test') {
+
+        stage('Build JAR') {
             steps {
                 script {
-                    echo "Testing the application..."
-                    echo "Executing pipeline for branch ${BRANCH_NAME}" 
+                    echo "Building Maven package"
+                    sh 'mvn clean package'
                 }
             }
         }
 
-        stage('Build') {
-            when {
-                expression { BRANCH_NAME == 'main' } 
-            }
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Building the application..."
+                    echo "Building Docker image..."
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-creds', 
+                        usernameVariable: 'USER', 
+                        passwordVariable: 'PASS'
+                    )]) {
+                        // Build image
+                        sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                        
+                        // Login ke Docker Hub
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                        
+                        // Push ke Docker Hub
+                        sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                    }
                 }
             }
         }
 
         stage('Deploy') {
             when {
-                expression { BRANCH_NAME == 'main' }
+                branch 'main'
             }
             steps {
                 script {
-                    echo "Deploying the application..."
+                    echo "Deploying the application"
+                    sh "docker run -d --name demo-container -p 8080:8080 ${DOCKER_IMAGE}:${DOCKER_TAG}"
                 }
             }
         }
     }
+
+    post {
+        success {
+            echo "Pipeline berhasil dijalankan!"
+        }
+        failure {
+            echo "Pipeline gagal. Cek log di konsol Jenkins."
+        }
+    }
 }
+
+apakah sudah benar begini
