@@ -8,7 +8,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "fdzak01/jenkins-demo-app"
-        DOCKER_TAG = "latest"
+        DOCKER_TAG = "jma-2.0"
     }
 
     stages {
