@@ -67,4 +67,3 @@ pipeline {
     }
 }
 
-apakah sudah benar begini
