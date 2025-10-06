@@ -2,24 +2,36 @@ pipeline {
     agent any
 
     tools {
+        // maven versi
         maven 'maven-3.9'
     }
 
     stages {
+
         stage('Build jar') {
             steps {
-                sh 'mvn package'
+                echo "Building Maven package..."
+                sh 'mvn clean package'
             }
         }
 
-        stage('Build Image') {
+        stage('Build Docker Image') {
             steps {
                 script {
                     echo "Building the Docker image..."
-                    withCredentials([usernamePassword(credentialsId: 'docker-hub-credential', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                        sh 'docker build -t azeyna/demo-app:jma-2.0 .'
-                        sh "echo \$PASS | docker login -u \$USER --password-stdin"
-                        sh 'docker push azeyna/demo-app:jma-2.0'
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-credential', 
+                        usernameVariable: 'USER', 
+                        passwordVariable: 'PASS'
+                    )]) {
+                        // Build image dengan nama dan tag
+                        sh 'docker build -t fdzak01/jenkins-demo-app:jma-2.0 .'
+
+                        // Login ke Docker Hub
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+
+                        // Push ke Docker Hub
+                        sh 'docker push fdzak01/jenkins-demo-app:jma-2.0'
                     }
                 }
             }
@@ -29,8 +41,18 @@ pipeline {
             steps {
                 script {
                     echo "Deploying the application..."
+                    sh 'docker run -d --name demo-container -p 8080:8080 fdzak01/jenkins-demo-app:jma-2.0 || true'
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline berhasil dijalankan!"
+        }
+        failure {
+            echo "Pipeline gagal. Cek log di konsol Jenkins."
         }
     }
 }
